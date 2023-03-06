@@ -2,13 +2,10 @@ use std::{
     thread,
     error::Error,
     fs::File,
+    time::Instant,
 };
 
-// #[feature(core_intrinsics)]
-// fn print_type_of<T>(_: &T) {
-//     println!("{}", unsafe { std::intrinsics::type_name::<T>() });
-// }
-
+#[derive(Debug)]
 struct Player {
     name: String,
     rating: u8,
@@ -18,6 +15,7 @@ struct Player {
     stats: Stats
 }
 
+#[derive(Debug)]
 struct Stats {
     pace: u8,
     shoot: u8,
@@ -30,14 +28,13 @@ struct Stats {
 const PATH: &str = "../Fifa22.csv";
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut data: Vec<Player> = Vec::new();
+    let start = Instant::now();
+    let mut data = vec![];
 
     let file = File::open(PATH)?;
     let mut rdr = csv::Reader::from_reader(file);
     for result in rdr.records() {
         let record = result?;
-        // println!("{:?}", record);
-        // print_type_of(&record);
 
         let map_player = |player: csv::StringRecord| -> Player {
             let result = Player{
@@ -58,17 +55,18 @@ fn main() -> Result<(), Box<dyn Error>> {
             result
         };
 
-        let player = map_player(record);
-        data.push(thread::spawn(move || -> Player {
+        data.push(thread::spawn(move || {
+            let player = map_player(record);
             player
         }));
-        // break;
     }
 
-    let final_result = data.into_iter();
+    let final_result = data.into_iter().map(|c| c.join().unwrap()).collect::<Vec<_>>();
 
-    println!("Final first result: {}", final_result[1]);
-    println!("Final result len: {}", final_result.len());
+    let duration = start.elapsed();
+    println!("Time elapsed: {:?}", duration);
+    println!("Final first result: {:?}", final_result[1]);
+    println!("Final result len: {:?}", final_result.len());
 
     Ok(())
 }
